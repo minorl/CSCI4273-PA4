@@ -1,0 +1,15 @@
+Leslie Minor
+11/7/2014
+To compile the program with driver1-3
+make all
+to run
+./test-*
+
+Everything works to my knowledge. 
+ThreadPool:
+	Producer/consumer. Required ot have a "thread available" boolean, so added a count to keep track of this. Not necessary.
+	Thread pool exit makes sure all threads finish before exiting.
+Message:
+	This uses the char* pointers and DOES NOT DO A DEEP COPY. If buffers used to initialize messages are edited, BEHAVIOR WILL NOT BE CORRECT
+Scheduler:
+	This is awful. Assumed time in schedule event was in ms. 
