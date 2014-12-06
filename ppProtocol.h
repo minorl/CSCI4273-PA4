@@ -3,26 +3,32 @@
 
 #include <unistd.h>   	//for pipe
 #include <pthread.h>  	//thread/mutex
-#include <select.h>   	//select
-#include <sys/types.h> 	//select const
+#include <sys/types.h> 	//
 #include <stdio.h> 		//perror
-#include <"message.h">
+#include <stdlib.h> 	//exit
+#include "headers.h"
+#include "message.h"
 
-#define NUM_PROTOCOLS = 8
+#define NUM_PROTOCOLS 8
 
 class ppProtocol
 {
 public:
 	ppProtocol();
 	~ppProtocol();
-	registerSendProtocol(int protocolID, int pipeFD, pthread_mutex_t pipeMutex);
-	registerRecvProtocol(int protocolID, int pipeFD, pthread_mutex_t pipeMutex);
 	void registerHLP(ppProtocol hlp);
 	void registerLLP(ppProtocol llp);
-	void getRecv(int pipe[], pthread_mutex_t mutex[]);
+	void getRecv(int pipe[]);
 	void getSend(int *pipe);
 
-
+	//receive from hlp (outbound msg)
+	int sendPipe[2];
+	//receive from llp (inbound msg)
+	int recvPipe[2];
+	//llp pipe (write outbound msg)
+	int llpPipe;
+	//hlpPipe (write inbound msg)
+	int hlpPipe[NUM_PROTOCOLS];
 
 
 private:
@@ -30,21 +36,8 @@ private:
 	//fixed message size --  no mutex
 	// PROBABLY
 
-	//receive from hlp (outbound msg)
-	int sendPipe;
-	// pthread_mutex_t sendMutex;
 
-	//receive from llp (inbound msg)
-	int recvPipe;
-	// pthread_mutex_t recvMutex;
 
-	//llp pipe (write outbound msg)
-	int llpPipe;
-	// pthread_mutex_t* llpMutex;
-
-	//hlpPipe (write inbound msg)
-	int hlpPipe[NUM_PROTOCOLS];
-	// pthread_mutex_t* hlpMutex[NUM_PROTOCOLS];
 
 	void* handleRecv(void); 
 	static void *handleRecvHelper(void *instance) {
@@ -56,10 +49,8 @@ private:
 	}
 	pthread_t sendThread;
 	pthread_t recvThread;
-	// fd_set sendFDset;
-	// fd_set recvFDset;
 	int protocolID;
-	
+
 };
 
 #endif

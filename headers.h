@@ -13,54 +13,54 @@
 typedef struct {
   int hlp; 
   char other_info[ETH_OI_LEN]; 
-  int len;
+  size_t len;
 } Header;
 
 typedef struct {
   int hlp; 
   char other_info[ETH_OI_LEN]; 
-  int len;
+  size_t len;
 } ethHeader;
 
 typedef struct {
   int hlp; 
   char other_info[IP_OI_LEN]; 
-  int len;
+  size_t len;
 } ipHeader;
 
 typedef struct {
   int hlp; 
   char other_info[TCP_OI_LEN]; 
-  int len;
+  size_t len;
 } tcpHeader;
 
 typedef struct {
   int hlp; 
   char other_info[UDP_OI_LEN]; 
-  int len;
+  size_t len;
 } udpHeader;
 
 typedef struct {
   int hlp; 
   char other_info[FTP_OI_LEN]; 
-  int len;
+  size_t len;
 } ftpHeader;
 
 typedef struct {
   int hlp; 
   char other_info[TEL_OI_LEN]; 
-  int len;
+  size_t len;
 } telHeader;
 
 typedef struct {
   int hlp; 
   char other_info[RDP_OI_LEN]; 
-  int len;
+  size_t len;
 } rdpHeader;
 
 typedef struct {
   int hlp; 
   char other_info[DNS_OI_LEN]; 
-  int len;
+  size_t len;
 } dnsHeader;
 #endif

@@ -1,3 +1,0 @@
-//per process model
-
-//protocol

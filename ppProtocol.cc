@@ -1,48 +1,59 @@
-ppProtocol::ppProtocol(){
-	// FD_ZERO(&sendFDset);
-	// FD_ZERO(&recvFDset);
+#include "ppProtocol.h"
 
+ppProtocol::ppProtocol(){
+	int rc;
+	rc = pthread_create(&sendThread,NULL, &ppProtocol::handleSendHelper,this);
+	if(rc){
+	    fprintf(stderr, "ERROR; return code from pthread_create() is %d\n", rc);
+		exit(1);	
+	}
+	rc = pthread_create(&recvThread,NULL, &ppProtocol::handleRecvHelper,this);
+	if(rc){
+	    fprintf(stderr, "ERROR; return code from pthread_create() is %d\n", rc);
+		exit(1);	
+	}
+	protocolID=1;
+	if(pipe(sendPipe)<0){
+		perror("pipe");
+		exit(1);
+	}
+	if(pipe(recvPipe)<0){
+		perror("pipe");
+		exit(1);
+	}
+	printf("sendpipe 0,1: %d %d\n", sendPipe[0],sendPipe[1]);
 
 }
 
 ppProtocol::~ppProtocol(){
-
+	//leak baby leak
 }
 
-ppProtocol::registerSendProtocol(int protocolID, int pipeFD, pthread_mutex_t pipeMutex){
-	sendPipe[protocolID-1] = pipeFD;
-	sendMutex[protocolID-1] = pipeMutex;
-	FD_SET(pipeFD, &sendFDset);
-}
-
-ppProtocol::registerRecvProtocol(int protocolID, int pipeFD, pthread_mutex_t pipeMutex){
-	recvPipe[protocolID-1] = pipeFD;
-	recvMutex[protocolID-1] = pipeMutex;
-	FD_SET(pipeFD, &recvFDset);
-}
 void ppProtocol::registerHLP(ppProtocol hlp){
 	//this level of abstraction is unncessary
-	// but it's so confusing
+	// but it's so confusing the naming conventions
 	//registers a higher level protocol
 	// hlp.getRecv(hlpPipe, hlpMutex);
 	hlp.getRecv(hlpPipe);
 }
 void ppProtocol::registerLLP(ppProtocol llp){
 	//registers a lower level protocol
-	llp.getSend(llpPipe);
+	llp.getSend(&llpPipe);
 }
 void ppProtocol::getRecv(int pipe[]){
 	//passes own information to a llp trying to register
 	// so send recv values
-	pipe[protocolID-1] = recvPipe;
+	//give WRITE end of recv pipe
+	pipe[protocolID-1] = recvPipe[1];
 	// mutex[protocolID-1] = &recvMutex;
 }
 void ppProtocol::getSend(int *pipe){
 	//passes own information to a hlp trying to register
 	// so send values
-	*pipe = sendPipe;
+	//give WRITE end of send pipe
+	*pipe = sendPipe[1];
 }
-ppProtocol::handleSend(){
+void* ppProtocol::handleSend(){
 	// reads send pipe
 	// which receives from hlp
 	// handles outbound messages
@@ -51,46 +62,93 @@ ppProtocol::handleSend(){
 	//expect int + msg ptr
 	int packetSize = sizeof(int)+sizeof(char*);
 	char buff[packetSize];
-
+	int ptr_size, int_size;
+	ptr_size = sizeof(char*);
+	int_size = sizeof(int);
 	int hlpID;
 	Message* msgPtr;
 	Header* head;
+	Header tester;
 	while(true){
-		// if(select(FD_SETSIZE, &sendFDset, NULL, NULL, NULL) < 0){
-		// 	perror("select");
-		// 	exit(1);
-		// }
-		//All registered fd's best be in our array
-		// for(i = 0; i < NUM_PROTOCOLS; ++i){
-		// 	if(FD_ISSET(sendPipe[i], &sendFDset)){
-		// 		pthread_mutex_lock(&sendMutex[i]);
-		// 			//read protocol id and msg ptr
-		// 		pthread_mutex_unlock(&sendMutex[i]);
-		// 	}
-		// }
-		if((nbytes = read(sendPipe, buff, receiveSize))<0){
+		//block here until something is written
+		//write is ATOMIC so we don't need mutices
+		nbytes = read(sendPipe[0], buff, packetSize);
+		if(nbytes<0){
 			perror("read");
-			exit(1)
+			exit(1);
 		}
 		else if(nbytes < packetSize){
 			fprintf(stderr, "Bytes read less than expected, big trouble.\n");
 		}
 		//process received info
-		hlpID = *((int*)buff);
-		msgPtr = (Message*)(buff+sizeof(int));
+		memcpy(&hlpID, &buff, int_size);
+		//this doesn't work=== why?
+		// msgPtr = (Message*)(buff+sizeof(int));
+		memcpy(&msgPtr, &buff[int_size], ptr_size);
+
 		//create new header
 		head = new Header;
+		memset(head, 0, sizeof(*head));
 		head->hlp = hlpID;
-		head->len= msgPtr->msgLen();
+		head->len = msgPtr->msgLen();
 		//add header to message
-		msgPtr->msgAddHeader((char*)head, sizeof(*head));
+
+		msgPtr->msgAddHdr((char*)head, sizeof(*head));
+
 		//send message down pipe
-		*((int*)buff) = protocolID;
+		   //include this id (hlp)
+		memcpy(&buff, &protocolID, int_size);
+		// *((int*)buff) = protocolID;
 		//it should already be this
-		(Message*)(buff+sizeof(int)) = msgPtr;
+		// *(Message*)(buff+sizeof(int)) = msgPtr;
 
-		write(llp, buff. packetSize);
+		//write message to llp
+		if(write(llpPipe, buff, packetSize)<0){
+			perror("write");
+			exit(1);
+		}
 	}
+}
 
-		
+void* ppProtocol::handleRecv(){
+	//reads recv pipe, which receives from llp
+	//process inc message, strip header and send up
+
+	int nbytes;
+	//expect msg ptr
+	int packetSize = sizeof(char*);
+	char buff[packetSize];
+	int hlpID;
+	Message* msgPtr;
+	Header* head;
+
+	while(true){
+		//block here until something is written
+		//write is ATOMIC so we don't need mutices
+		if((nbytes = read(recvPipe[0], buff, packetSize))<0){
+			perror("read");
+			exit(1);
+		}
+		else if(nbytes < packetSize){
+			fprintf(stderr, "Bytes read less than expected, big trouble.\n");
+		}
+		//process received info
+		memcpy(&msgPtr, &buff, packetSize);
+		// msgPtr = (Message*)buff;
+		//remove own level protocol
+		head = (Header*)msgPtr->msgStripHdr(sizeof(Header));
+		hlpID = head->hlp;
+
+		//send message up pipe
+		   //to appropriate hlp
+
+		//this should already be set
+		// (Message*)(buff) = msgPtr;
+
+		//write message to hlp
+		if(write(hlpPipe[hlpID-1], buff, packetSize) <0){
+			perror("write");
+			exit(1);
+		}
+	}
 }
