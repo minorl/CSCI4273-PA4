@@ -10,11 +10,11 @@
 #define RDP_OI_LEN 12
 #define DNS_OI_LEN 8
 
-typedef struct {
-  int hlp; 
-  char other_info[ETH_OI_LEN]; 
-  size_t len;
-} Header;
+// typedef struct {
+//   int hlp; 
+//   char other_info[ETH_OI_LEN]; 
+//   size_t len;
+// } Header;
 
 typedef struct {
   int hlp; 

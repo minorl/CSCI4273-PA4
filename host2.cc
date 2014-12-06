@@ -8,7 +8,7 @@ int main(int argc, char* argv[], char* envp[]){
 	(void)envp;
 	printf("setup\n");
 	//	set up network
-	ppETH eth(5555, "6666", "127.0.0.1");
+	ppETH eth(6666, "5555", "127.0.0.1");
 	ppIP ip;
 	ppTCP tcp;
 	ppUDP udp;
@@ -16,11 +16,6 @@ int main(int argc, char* argv[], char* envp[]){
 	ppTEL tel;
 	ppRDP rdp;
 	ppDNS dns;
-
-	ftpAPP ftpApplication;
-	telAPP telApplication;
-	dnsAPP dnsApplication;
-	rdpAPP rdpApplication;
 
 	eth.setID(1);
 	ip.setID(2);
@@ -31,11 +26,6 @@ int main(int argc, char* argv[], char* envp[]){
 	rdp.setID(7);
 	dns.setID(8);
 
-	ftpApplication.setID(5);
-	dnsApplication.setID(8);
-	telApplication.setID(6);
-	rdpApplication.setID(7);
-
 	eth.registerHLP(ip);
 	ip.registerHLP(tcp);
 	ip.registerHLP(udp);
@@ -43,11 +33,6 @@ int main(int argc, char* argv[], char* envp[]){
 	tcp.registerHLP(tel);	
 	udp.registerHLP(rdp);
 	udp.registerHLP(dns);
-
-	dns.registerHLP(dnsApplication);
-	ftp.registerHLP(ftpApplication);
-	rdp.registerHLP(rdpApplication);
-	tel.registerHLP(telApplication);
 	
 	ftp.registerLLP(tcp);
 	tel.registerLLP(tcp);
@@ -57,13 +42,7 @@ int main(int argc, char* argv[], char* envp[]){
 	udp.registerLLP(ip);
 	ip.registerLLP(eth);
 
-	dnsApplication.registerLLP(dns);
-	ftpApplication.registerLLP(ftp);
-	rdpApplication.registerLLP(rdp);
-	telApplication.registerLLP(tel);
-
 	printf("setup done\n");
-	sleep(4);
 	// simulate app
 	int appfd[2];
 	// int socketfd[2];

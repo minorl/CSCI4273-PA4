@@ -8,7 +8,7 @@ int main(int argc, char* argv[], char* envp[]){
 	(void)envp;
 	printf("setup\n");
 	//	set up network
-	ppETH eth(5555, "6666", "127.0.0.1");
+	ppETH eth;
 	ppIP ip;
 	ppTCP tcp;
 	ppUDP udp;
@@ -16,11 +16,6 @@ int main(int argc, char* argv[], char* envp[]){
 	ppTEL tel;
 	ppRDP rdp;
 	ppDNS dns;
-
-	ftpAPP ftpApplication;
-	telAPP telApplication;
-	dnsAPP dnsApplication;
-	rdpAPP rdpApplication;
 
 	eth.setID(1);
 	ip.setID(2);
@@ -31,11 +26,6 @@ int main(int argc, char* argv[], char* envp[]){
 	rdp.setID(7);
 	dns.setID(8);
 
-	ftpApplication.setID(5);
-	dnsApplication.setID(8);
-	telApplication.setID(6);
-	rdpApplication.setID(7);
-
 	eth.registerHLP(ip);
 	ip.registerHLP(tcp);
 	ip.registerHLP(udp);
@@ -43,12 +33,6 @@ int main(int argc, char* argv[], char* envp[]){
 	tcp.registerHLP(tel);	
 	udp.registerHLP(rdp);
 	udp.registerHLP(dns);
-
-	dns.registerHLP(dnsApplication);
-	ftp.registerHLP(ftpApplication);
-	rdp.registerHLP(rdpApplication);
-	tel.registerHLP(telApplication);
-	
 	ftp.registerLLP(tcp);
 	tel.registerLLP(tcp);
 	rdp.registerLLP(udp);
@@ -57,30 +41,24 @@ int main(int argc, char* argv[], char* envp[]){
 	udp.registerLLP(ip);
 	ip.registerLLP(eth);
 
-	dnsApplication.registerLLP(dns);
-	ftpApplication.registerLLP(ftp);
-	rdpApplication.registerLLP(rdp);
-	telApplication.registerLLP(tel);
-
 	printf("setup done\n");
-	sleep(4);
-	// simulate app
+	//simulate app and socket
 	int appfd[2];
-	// int socketfd[2];
+	int socketfd[2];
 
 	if(pipe(appfd)<0){
 		perror("pipe");
 	}
-	// if(pipe(socketfd)<0){
-	// 	perror("pipe");
-	// }
+	if(pipe(socketfd)<0){
+		perror("pipe");
+	}
 
 	//ftp will write up to app
 	ftp.hlpPipe[1] = appfd[1];
-	// app will write to ftp sendpipe
+	//app will write to ftp sendpipe
 
-	// //make eth write down to socket, we'll read parse and write back
-	// eth.llpPipe = socketfd[1];
+	//make eth write down to socket, we'll read parse and write back
+	eth.llpPipe = socketfd[1];
 
 
 	printf("making message\n");
@@ -96,10 +74,10 @@ int main(int argc, char* argv[], char* envp[]){
 	printf("write\n");
 	sleep(2);
 	nbytes = write(ftp.sendPipe[1], buff, sizeof(char*)+sizeof(x));
-	// printf("readat bottom\n");
-	// nbytes = read(socketfd[0], buff,sizeof(char*)+sizeof(x));
-	// printf("write back bottom\n");
-	// nbytes = write(eth.recvPipe[1], &buff[sizeof(x)], sizeof(char*));
+	printf("readat bottom\n");
+	nbytes = read(socketfd[0], buff,sizeof(char*)+sizeof(x));
+	printf("write back bottom\n");
+	nbytes = write(eth.recvPipe[1], &buff[sizeof(x)], sizeof(char*));
 	printf("read at top\n");
 	nbytes = read(appfd[0], buff2, sizeof(char*));
 	Message *n;
@@ -108,6 +86,10 @@ int main(int argc, char* argv[], char* envp[]){
 	n->msgFlat(thing2);
 	thing2[n->msgLen()] ='\0';
 	printf("%s\n", thing2);
-	sleep(10);
+
+
+ 	
+ 
+
 
 }
