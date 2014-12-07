@@ -1,5 +1,5 @@
 #include "message.h"
-#include "ppProtocol.h"
+#include "ppp.h"
 #include <time.h>
 #include <sys/time.h>
 

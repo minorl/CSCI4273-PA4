@@ -14,8 +14,8 @@ int main(int argc, char* argv[], char* envp[]){
     numRuns = atoi(argv[1]);
   }
 
-  const char* args1[] = {"./hostPP", "5555", "127.0.0.1", "6666", NULL};
-  const char* args2[] = {"./hostPP", "6666", "127.0.0.1", "5555", NULL};
+  const char* args1[] = {"./ppprunner", "5555", "127.0.0.1", "6666", NULL};
+  const char* args2[] = {"./ppprunner", "6666", "127.0.0.1", "5555", NULL};
   pid_t child_pid1;
   pid_t child_pid2;
   int child_status;

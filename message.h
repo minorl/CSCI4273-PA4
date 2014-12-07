@@ -1,35 +1,49 @@
-#ifndef MESSAGE_H
-#define MESSAGE_H
-#include <unistd.h>
+#ifndef __MESSAGE_H
+#define __MESSAGE_H
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <list>
+#include <string.h>
+#include <mutex>
+using namespace std;
 
-struct messageNode
-{
-	char* msgptr;
-	size_t len;
-};
+// extern std::atomic<int> count;
+extern int count;
+extern int numMsg;
+extern pthread_mutex_t count_mutex;
+extern pthread_cond_t count_threshold_cv;
 
-class Message
-{
+class Message {
 public:
    
     Message( );
     Message(char* msg, size_t len);
     ~Message( );
     void msgAddHdr(char *hdr, size_t length);
-    char* msgStripHdr(size_t len);
+    char* msgStripHdr(int len);
     int msgSplit(Message& secondMsg, size_t len);
     void msgJoin(Message& secondMsg);
     size_t msgLen( );
     void msgFlat(char *buffer);
+    char* originalBuffer;
+    static int messageCount;
+    int id;
+    static int maxMessages;
+    static mutex m;
+    static bool done;
+    static bool getDone();
+    static void setDone(bool set);
 
 private:
-	std::list<struct messageNode>::iterator findN(size_t &n);
     size_t msglen;
-    std::list<struct messageNode> messageList;
+    class field{
+        public:
+            field(char* data, size_t len){
+                this->data  = data;
+                this->len   = len;
+            }
+            char* data;
+            size_t len;
+    };
+    list<field*> fieldList;
 };
-
 #endif

@@ -1,4 +1,4 @@
-#include "ppProtocol.h"
+#include "ppp.h"
 
 ppProtocol::ppProtocol(int id){
 	protocolID = id;
