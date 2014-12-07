@@ -2,11 +2,12 @@ CC=g++
 FLAGS=-g -std=gnu++11 -Wall -Wextra
 LIBS=-lpthread
 
-all: host1 host2
+all: hostPP timePP
 
-host1: host1.cc message.o ppProtocol.o
-	$(CC) $(FLAGS) -o $@ $^ $(LIBS)
-host2: host2.cc message.o ppProtocol.o
+timePP: timePP.cc
+	$(CC) $(FLAGS) -o $@ $^ 	
+
+hostPP: hostPP.cc message.o ppProtocol.o
 	$(CC) $(FLAGS) -o $@ $^ $(LIBS)
 
 driver1: driver1.cc threadpool.o
@@ -31,4 +32,4 @@ ppProtocol.o: ppProtocol.cc
 	$(CC) $(FLAGS) -o $@ -c $^
 
 clean:
-	rm -f threadpool.o eventscheduler.o message.o ppProtocol.o host1 host2 driver1 driver2 driver3
+	rm -f threadpool.o eventscheduler.o message.o ppProtocol.o timePP hostPP driver1 driver2 driver3

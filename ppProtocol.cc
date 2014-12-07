@@ -1,6 +1,11 @@
 #include "ppProtocol.h"
 
-ppProtocol::ppProtocol(){
+ppProtocol::ppProtocol(int id){
+	protocolID = id;
+
+}
+void ppProtocol::start(){
+	//turns out i have no idea how c++ inheritance works
 	int rc;
 	rc = pthread_create(&sendThread,NULL, &handleSendHelper,this);
 	if(rc){
@@ -21,7 +26,6 @@ ppProtocol::ppProtocol(){
 		exit(1);
 	}
 }
-
 ppProtocol::~ppProtocol(){
 	//leak baby leak
 }
@@ -41,7 +45,6 @@ void ppProtocol::getRecv(int pipe[]){
 	//passes own information to a llp trying to register
 	// so send recv values
 	//give WRITE end of recv pipe
-	printf("setting proto id: %d to fd %d\n", protocolID-1, recvPipe[1] );
 	pipe[protocolID-1] = recvPipe[1];
 	// mutex[protocolID-1] = &recvMutex;
 }
@@ -79,8 +82,8 @@ void* ppProtocol::handleSend(){
 		}
 		else if(nbytes < packetSize){
 			fprintf(stderr, "Bytes read less than expected, big trouble.\n");
+			fprintf(stderr, "Protoid %d, recvd %d, expected %d\n", protocolID, nbytes, packetSize);
 		}
-		printf("PROTOID SENDING DOWN %d\n", protocolID);
 		//process received info
 		memcpy(&hlpID, &buff, int_size);
 		//this doesn't work=== why?
@@ -95,7 +98,6 @@ void* ppProtocol::handleSend(){
 		//add header to message
 
 		msgPtr->msgAddHdr((char*)head, sizeof(*head));
-		printf("WRITING MSG LEN %d\n", msgPtr->msgLen());
 		//send message down pipe
 		   //include this id (hlp)
 		memcpy(&buff, &protocolID, int_size);
@@ -105,6 +107,7 @@ void* ppProtocol::handleSend(){
 
 		//write message to llp
 		if(write(llpPipe, buff, packetSize)<0){
+			fprintf(stderr, "in Proto %d to llp:\n", protocolID);
 			perror("write");
 			exit(1);
 		}
@@ -126,7 +129,6 @@ void* ppProtocol::handleRecv(){
 	while(true){
 		//block here until something is written
 		//write is ATOMIC so we don't need mutices
-		printf("blocked to read\n");
 		if((nbytes = read(recvPipe[0], buff, packetSize))<0){
 			perror("read");
 			exit(1);
@@ -148,16 +150,16 @@ void* ppProtocol::handleRecv(){
 		// (Message*)(buff) = msgPtr;
 
 		//write message to hlp
-		printf("protoid %d sending msg up to %d\n", protocolID, hlpID);
 
 		if(write(hlpPipe[hlpID-1], buff, packetSize) <0){
+			fprintf(stderr, "in Proto %d to %d:\n", protocolID, hlpID );
 			perror("write");
 			exit(1);
 		}
 	}
 }
 
-ppETH::ppETH(int listenPort, const char* sendPort, const char* sendHost):ppProtocol(){
+ppETH::ppETH(int id, int listenPort, const char* sendPort, const char* sendHost) : ppProtocol(id){
 	int rc;
 	rc = pthread_create(&sendThread,NULL, &handleSendHelper,this);
 	if(rc){
@@ -176,6 +178,12 @@ ppETH::ppETH(int listenPort, const char* sendPort, const char* sendHost):ppProto
 	//recv is from socket
 	recvReadSocket = bindUDPListen(listenPort);
 	recvSendSocket = getUDPSend(sendHost, sendPort);
+	sleep(2);
+}
+ppETH::~ppETH(){
+	close(recvReadSocket);
+	close(recvSendSocket);
+	// printf("DESTRUCTED\n");
 }
 
 int ppETH::getUDPSend(const char *host, const char *portnum){
@@ -255,7 +263,6 @@ void* ppETH::handleSend(){
 		//block here until something is written
 		//write is ATOMIC so we don't need mutices
 		nbytes = read(sendPipe[0], buff, packetSize);
-		printf("ETH READ FROM SENDPIPE\n");
 		if(nbytes<0){
 			perror("read");
 			exit(1);
@@ -263,7 +270,6 @@ void* ppETH::handleSend(){
 		else if(nbytes < packetSize){
 			fprintf(stderr, "Bytes read less than expected, big trouble.\n");
 		}
-		printf("ETHERNET SENDING MSG\n");
 
 		//process received info
 		memcpy(&hlpID, &buff, int_size);
@@ -296,7 +302,6 @@ void* ppETH::handleSend(){
 void* ppETH::handleRecv(){
 	//reads recv pipe, which receives from llp
 	//process inc message, strip header and send up
-
 	int nbytes;
 	//expect 1024 buffer
 	int packetSize = 1024;
@@ -307,12 +312,9 @@ void* ppETH::handleRecv(){
 	Header* head;
 	char* charptr;
 
-
-
 	while(true){
 		//block here until something is written
 		//write is ATOMIC so we don't need mutices
-		printf("blocked to read\n");
 		if((nbytes = read(recvReadSocket, buff, packetSize))<0){
 			perror("read");
 			exit(1);
@@ -323,12 +325,10 @@ void* ppETH::handleRecv(){
 		//process received info
 		memcpy(&msgLen, &buff, sizeof(int));
 		msgLen = ntohl(msgLen);
-		printf("msgLen is %d\n", msgLen);
 		
 		charptr = new char[msgLen];
 		memset(charptr, 0, msgLen);
 		memcpy(charptr, &buff[sizeof(int)], msgLen);
-		printf("msg is %s\n", charptr);
 
 		msgPtr = new Message(charptr, msgLen);
 		//remove own level protocol
@@ -340,6 +340,7 @@ void* ppETH::handleRecv(){
 
 		//write message to hlp
 		if(write(hlpPipe[hlpID-1], buff, sizeof(char*)) <0){
+			fprintf(stderr, "in Proto %d to %d:\n", protocolID, hlpID );
 			perror("write");
 			exit(1);
 		}
@@ -347,7 +348,7 @@ void* ppETH::handleRecv(){
 }
 
 void ppETH::sendUDP(int fd, char* message, int length){
-    printf("Sending message: <<%s>>\n", message);
+    // printf("Sending message: <<%s>>\n", message);
     int totalBytesSent = 0;
     while(totalBytesSent < length){
         int bytesSent = write(fd, &message[totalBytesSent], length - totalBytesSent);
@@ -359,6 +360,39 @@ void ppETH::sendUDP(int fd, char* message, int length){
     }
 }
 
+ppAPP::ppAPP(int id, bool timer) : ppProtocol(id){
+	// start threads in 'start funciton'
+	//only recv pipe
+	//still calling default.. awkward.
+	if(pipe(recvPipe)<0){
+		perror("pipe");
+		exit(1);
+	}
+	//if true do signaling when app finished recv/send
+	timing = timer;
+
+}
+void ppAPP::start(){
+	int rc;
+	rc = pthread_create(&sendThread,NULL, &handleSendHelper,this);
+	if(rc){
+	    fprintf(stderr, "ERROR; return code from pthread_create() is %d\n", rc);
+		exit(1);	
+	}
+	rc = pthread_create(&recvThread,NULL, &handleRecvHelper,this);
+	if(rc){
+	    fprintf(stderr, "ERROR; return code from pthread_create() is %d\n", rc);
+		exit(1);	
+	}
+}
+void ppAPP::startListen(){
+	int rc;
+	rc = pthread_create(&recvThread,NULL, &handleRecvHelper,this);
+	if(rc){
+	    fprintf(stderr, "ERROR; return code from pthread_create() is %d\n", rc);
+		exit(1);	
+	}
+}
 void* ppAPP::handleSend(){
 	// reads send pipe
 
@@ -380,24 +414,23 @@ void* ppAPP::handleSend(){
 	Message* msgPtr;
 	Header* head;
 	char* msgContent;
-	for(int i = 1; i <= msgLen; ++i){
-		printf("APP SENDING DOWN %d\n", protocolID);
+	for(int i = 1; i <= numMsgs; ++i){
 		//create message 
 		msgContent = new char[msgLen];
 		memset(msgContent, 'A', msgLen);
-		msgPtr = new Message(msgContent);
+		msgPtr = new Message(msgContent, msgLen);
 		
 		//create new header
 		head = new Header;
 		memset(head, 0, sizeof(*head));
 
-		//end of the line
-		head->hlp = 0;
+		//end of the line, id apps by protoid of llp
+		//(since llp won't be registered with self)
+		head->hlp = protocolID;
 		head->len = msgPtr->msgLen();
 
 		//add header to message
 		msgPtr->msgAddHdr((char*)head, sizeof(*head));
-		printf("WRITING MSG LEN %d\n", msgPtr->msgLen());
 
 		//send message down pipe
 		   //include this id (hlp)
@@ -406,15 +439,25 @@ void* ppAPP::handleSend(){
 
 		//write message to llp
 		if(write(llpPipe, buff, packetSize)<0){
-			perror("write");
+			perror("inapp: write");
 			exit(1);
 		}
 		//sleep 
 		usleep(sleepTime);
 	}
+	// printf("All messages sent\n");
+	if(timing){
+		pthread_mutex_lock(&count_mutex);
+		count++;
+		if(count == numApps*2){
+			pthread_cond_signal(&count_threshold_cv);
+		}
+		pthread_mutex_unlock(&count_mutex);
+	}
+	return NULL;
 }
 
-void* ppProtocol::handleRecv(){
+void* ppAPP::handleRecv(){
 	//reads recv pipe, which receives from llp
 	//count recvd messages
 
@@ -429,10 +472,10 @@ void* ppProtocol::handleRecv(){
 	Header* head;
 	char* msgContent;
 
-	for(int i = 1; i <= 100; i++){
+
+	for(int i = 1; i <= numMsgs; i++){
 		//block here until something is written
 		//write is ATOMIC so we don't need mutices
-		printf("blocked to read\n");
 		if((nbytes = read(recvPipe[0], buff, packetSize))<0){
 			perror("read");
 			exit(1);
@@ -446,19 +489,29 @@ void* ppProtocol::handleRecv(){
 		//remove own level protocol
 		head = (Header*)msgPtr->msgStripHdr(sizeof(Header));
 		hlpID = head->hlp;
+		if(hlpID != protocolID){
+			fprintf(stderr, "hlpID wrong in APP, ruh roh.\n");
+		}
 
-		msgContent = new char[100];
+		msgContent = new char[msgLen];
 		msgPtr->msgFlat(msgContent);
 		msgContent[msgPtr->msgLen()] = '\0';
-		printf("App recv %s\n", msgContent);
 
 		//inadequate clean up
 		delete head;
 		delete[] msgContent;
 		delete msgPtr;
-		if (i % 10 == 0)
-		{
-			printf("%d messages recvd\n", i);
-		}
 	}
+	
+	// printf("All messages recvd\n");
+	if(timing){
+		pthread_mutex_lock(&count_mutex);
+		count++;
+		if(count == numApps*2){
+			pthread_cond_signal(&count_threshold_cv);
+		}
+		pthread_mutex_unlock(&count_mutex);
+	}
+
+	return NULL;
 }
