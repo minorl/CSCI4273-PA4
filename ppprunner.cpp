@@ -43,14 +43,6 @@ int main(int argc, char* argv[], char* envp[]){
 	ppRDP rdp(7);
 	ppDNS dns(8);
 
-	ip.start();
-	tcp.start();
-	udp.start();
-	ftp.start();
-	tel.start();
-	rdp.start();
-	dns.start();
-
 	ftpAPP ftpApplication(5, true);
 	telAPP telApplication(6, true);
 	rdpAPP rdpApplication(7, true);
@@ -82,6 +74,14 @@ int main(int argc, char* argv[], char* envp[]){
 	ftpApplication.registerLLP(ftp);
 	rdpApplication.registerLLP(rdp);
 	telApplication.registerLLP(tel);
+
+	ip.start();
+	tcp.start();
+	udp.start();
+	ftp.start();
+	tel.start();
+	rdp.start();
+	dns.start();
 
 
 	//make sure everything is set before we start timing

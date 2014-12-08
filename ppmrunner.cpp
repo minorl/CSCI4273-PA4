@@ -32,7 +32,7 @@ int main(int argc, char** argv){
     struct timeval t2;
 
 
-    sleep(4);
+    sleep(7);
     gettimeofday(&t1, NULL);
     // printf("Going.\n");
     for(int i = 0;i < 100;i++){
