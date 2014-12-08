@@ -334,27 +334,22 @@ void* ppProtocol<Header>::handleRecv(){
 		//process received info
 		memcpy(&msgPtr, &buff, packetSize);
 		// msgPtr = (Message*)buff;
-		printf("Protoid %d headerlen %lu\n",protocolID, sizeof(Header));
+		// printf("Protoid %d headerlen %lu\n",protocolID, sizeof(Header));
 		
 		//remove own level protocol
 		head = (Header*)msgPtr->msgStripHdr(sizeof(Header));
 		hlpID = head->hlp;
 
-		printf("Header ints...\n");
-		for(int i = 0; i < 4; i++){
-			printf("Header ints: %d\n", *((int*)head+sizeof(int)*i));
-		}
 
 		//send message up pipe
 		   //to appropriate hlp
 
 		//this should already be set
 		// (Message*)(buff) = msgPtr;
-		fprintf(stderr, "Received in (id %d) sending to %d:\n", protocolID, hlpID );
 
 		//write message to hlp
 		//write message to hlp
-		if(hlpID == 0 || hlpID == 1){
+		if(hlpID == 0 || hlpID == 1 || hlpID == -1){
 			//0 not valid, 1 is ethernet, not "above" anyone
 		 fprintf(stderr, "Incorrect hlp: in Proto %d to %d:\n", protocolID, hlpID);
 		 continue;
@@ -482,8 +477,6 @@ void* ppETH::handleSend(){
 		else if(nbytes < packetSize){
 			fprintf(stderr, "ETHSEND: Bytes read less than expected, big trouble.\n");
 		}
-		printf("In eth send..... read %d bytes\n", nbytes);
-
 		//process received info
 		memcpy(&hlpID, &buff, int_size);
 		//this doesn't work=== why?
@@ -548,19 +541,11 @@ void* ppETH::handleRecv(){
 		msgPtr = new Message(charptr, msgLen);
 		//remove own level protocol
 		head = (ethHeader*)msgPtr->msgStripHdr(sizeof(ethHeader));
-		printf("Protoid %d headerlen %lu\n",protocolID, sizeof(ethHeader));
+		// printf("Protoid %d headerlen %lu\n",protocolID, sizeof(ethHeader));
 		hlpID = head->hlp;
-		printf("Header ints...\n");
-		for(int i = 0; i < 4; i++){
-			printf("Header ints: %d\n", *((int*)head+sizeof(int)*i));
-		}
 
-		
 		memset(buff,0,packetSize);		
 		memcpy(&buff, &msgPtr, sizeof(char*));
-
-		fprintf(stderr, "Received in eth (id %d) sending to %d:\n", protocolID, hlpID );
-		
 
 		//write message to hlp
 		if(hlpID == 0 || hlpID == 1){
@@ -732,7 +717,8 @@ void* ppAPP<Header>::handleRecv(){
 		msgContent = new char[msgLen];
 		msgPtr->msgFlat(msgContent);
 		msgContent[msgPtr->msgLen()] = '\0';
-		printf("Received msg #%d, %s\n", i,msgContent);
+		
+		// printf("Received msg #%d, %s\n", i,msgContent);
 
 		//inadequate clean up
 		delete head;

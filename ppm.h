@@ -38,7 +38,8 @@ class ProcessPerMessage{
         static void deliverEthernet(void * m);
         static void deliverIP(Message* m);
         static void deliverTransportLayer(Message* m);
-        static void deliverTopLevel(Message* m, int strip, const char* name);
+        static void deliverTopLevel(Message* m, int strip);
+        static void deliverToApp(Message* m, int strip, const char* name);
 
         int outSockFD;
 
@@ -108,12 +109,12 @@ class ProcessPerMessage{
         }
 
         void sendUDP(int fd, char* message, int length){
-            //printf("Sending message: <<%s>>\n", message);
+            // printf("Sending message: <<%s>>, length %d\n", message, length);
             int totalBytesSent = 0;
             while(totalBytesSent < length){
                 int bytesSent = write(fd, &message[totalBytesSent], length - totalBytesSent);
                 if(bytesSent == -1){
-                    perror("sendUDP write");
+                    perror("ppm::sendUDP write");
                     exit(1);
                 }
                 totalBytesSent += bytesSent;

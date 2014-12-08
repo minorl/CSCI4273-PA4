@@ -25,9 +25,7 @@ message.o: message.cpp
 timePP: timePP.cpp
 	$(CC) $(FLAGS) -o $@ $^ 
 
-timePM: timePM.cpp
-	$(CC) $(FLAGS) -o $@ $^ 
-timeMix: timeMix.cpp
+time: time.cpp
 	$(CC) $(FLAGS) -o $@ $^ 
 
 clean:

@@ -33,19 +33,19 @@
     }
 
     void ProcessPerMessage::deliverEthernet(void* m){
-        //printf("Delivering ethernet.\n");
+        // printf("Delivering ethernet.\n");
         Message * inboundMsg = (Message*) m;
         char* header = inboundMsg->msgStripHdr(sizeof(int) + 8 + sizeof(size_t));
         int hlpId = *((int*)header);
         if(hlpId == 2){
             deliverIP(inboundMsg);
         }else{
-            //printf("Ethernet received wrong hlp.");
+            printf("Ethernet received wrong hlp.");
         }
     }
 
     void ProcessPerMessage::deliverIP(Message* inboundMsg){
-        //printf("Delivering ip.\n");
+        // printf("Delivering ip.\n");
         //printf("Stripping header\n");
         char* header = inboundMsg->msgStripHdr(sizeof(int) + 12 + sizeof(size_t));
         //printf("Stripped header\n");
@@ -54,26 +54,26 @@
         if((hlpId == 3) || (hlpId == 4)){
             deliverTransportLayer(inboundMsg);
         }else{
-            //printf("IP received wrong hlp.");
+            printf("IP received wrong hlp.");
         }
     }
 
     void ProcessPerMessage::deliverTransportLayer(Message* inboundMsg){
-        //printf("Delvering transport.\n");
+        // printf("Delvering transport.\n");
         char* header = inboundMsg->msgStripHdr(sizeof(int) + 4 + sizeof(size_t));
         int hlpId = *((int*)header);
         switch(hlpId){
         case 5:
-            deliverTopLevel(inboundMsg, 8, "FTP");
+            deliverTopLevel(inboundMsg, 8);
             break;
         case 6:
-            deliverTopLevel(inboundMsg, 8, "Telnet");
+            deliverTopLevel(inboundMsg, 8);
             break;
         case 7:
-            deliverTopLevel(inboundMsg, 12, "RDP");
+            deliverTopLevel(inboundMsg, 12);
             break;
         case 8:
-            deliverTopLevel(inboundMsg, 8, "DNS");
+            deliverTopLevel(inboundMsg, 8);
             break;
         default:
             printf("Incorrect hlp in TCP/UDP: got %d.\n", hlpId);
@@ -81,8 +81,32 @@
 
         }
 
-    void ProcessPerMessage::deliverTopLevel(Message* inboundMsg, int strip, const char* name){
-       // //printf("Delivering top level.\n");
+    void ProcessPerMessage::deliverTopLevel(Message* inboundMsg, int strip){
+        // printf("Delvering top level.\n");
+        char* header = inboundMsg->msgStripHdr(sizeof(int) + strip + sizeof(size_t));
+        int hlpId = *((int*)header);
+        switch(hlpId){
+        case 5:
+            deliverToApp(inboundMsg, 8, "FTP");
+            break;
+        case 6:
+            deliverToApp(inboundMsg, 8, "Telnet");
+            break;
+        case 7:
+            deliverToApp(inboundMsg, 12, "RDP");
+            break;
+        case 8:
+            deliverToApp(inboundMsg, 8, "DNS");
+            break;
+        default:
+            printf("Incorrect hlp in top level: got %d.\n", hlpId);
+        }
+    }
+
+    
+
+    void ProcessPerMessage::deliverToApp(Message* inboundMsg, int strip, const char* name){
+        // printf("Delivering to app.\n");
         inboundMsg->msgStripHdr(sizeof(int) + strip + sizeof(size_t));
         size_t length = inboundMsg->msgLen();
         char * remainder = new char[length + 1];
@@ -110,6 +134,7 @@
             pthread_cond_signal(&count_threshold_cv);
         }
         pthread_mutex_unlock(&count_mutex);
+
     }
 
     void ProcessPerMessage::sendTopLevel(char* message, size_t length, int protoId){
@@ -131,18 +156,31 @@
         }
 
         size_t headerLength = sizeof(int) + infoLength + sizeof(size_t);
+        // printf("Protoid %d header length: %lu\n",protoId, headerLength);
         char* header = new char[headerLength];
-        //WHAT IS THIS DOING?!
-        *((int*)header) = -1;
+        *((int*)header) = protoId;
         memset(header + sizeof(int), 0, infoLength);
         *((size_t*)(header + sizeof(int) + infoLength)) = outboundMessage->msgLen();
+
+        // printf("Header ints (sendTopLevel)...\n");
+        // for(int i = 0; i < 4; i++){
+        //     printf("Header ints: %d\n", *((int*)header+sizeof(int)*i));
+        // }
+
+        //double header to match PPP code
         outboundMessage->msgAddHdr(header, headerLength);
+        char* header2 = new char[headerLength];
+        memcpy(header2, header, headerLength);
+        *((size_t*)(header + sizeof(int) + infoLength)) = outboundMessage->msgLen();
+        outboundMessage->msgAddHdr(header2, headerLength);
+
         sendTransportLayer(outboundMessage, transportProtoId, protoId);
     }
 
     void ProcessPerMessage::sendTransportLayer(Message * outboundMessage,int protoId, int hlp){
         int infoLength = 4;
         size_t headerLength = sizeof(int) + infoLength + sizeof(size_t);
+        // printf("UDP/TCP header length: %lu\n", headerLength);
         char* header = new char[headerLength];
         *((int*)header) = hlp;
         memset(header + sizeof(int), 0, infoLength);
@@ -154,6 +192,7 @@
     void ProcessPerMessage::sendIP(Message * outboundMessage, int hlp){
         int infoLength = 12;
         size_t headerLength = sizeof(int) + infoLength + sizeof(size_t);
+        // printf("IP header length: %lu\n", headerLength);
         char* header = new char[headerLength];
         *((int*)header) = hlp;
         memset(header + sizeof(int), 0, infoLength);
@@ -169,10 +208,14 @@
         *((int*)header) = 2; //IP is the hlp
         memset(header + sizeof(int), 0, infoLength);
         *((size_t*)(header + sizeof(int) + infoLength)) = outboundMessage->msgLen();
+        // printf("Eth header len %lu\n", headerLength);
         outboundMessage->msgAddHdr(header, headerLength);
         char * data = new char[1024];
         memset(data,0,1024);
         outboundMessage->msgFlat(data + sizeof(int));
         *((int*)data) = htonl(outboundMessage->msgLen());
+
+
+
         sendUDP(outSockFD, data, 1024);
     }

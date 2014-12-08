@@ -18,7 +18,7 @@ int main(int argc, char* argv[], char* envp[]){
 	//silence warnings
 	(void)envp;
     if(argc != 4){
-        printf("Wrong number of arguments. Usage %s <own port> <target ip> <target port> \n", argv[0]);
+        printf("Wrong number of arguments. Usage %s <local port> <remote host> <remote port> \n", argv[0]);
         return 1;
     }
 
@@ -77,6 +77,7 @@ int main(int argc, char* argv[], char* envp[]){
 	udp.registerLLP(ip);
 	ip.registerLLP(eth);
 
+
 	dnsApplication.registerLLP(dns);
 	ftpApplication.registerLLP(ftp);
 	rdpApplication.registerLLP(rdp);
@@ -84,16 +85,20 @@ int main(int argc, char* argv[], char* envp[]){
 
 
 	//make sure everything is set before we start timing
-	sleep(1);
+	sleep(2);
 	gettimeofday(&t1, NULL);
-	dnsApplication.start();
-	ftpApplication.start();
-	rdpApplication.start();
-	telApplication.start();
-
+	// dnsApplication.startListen();
+	// ftpApplication.startListen();
+	// rdpApplication.startListen();
+	// telApplication.startListen();
+	dnsApplication.startApplication();
+	ftpApplication.startApplication();
+	rdpApplication.startApplication();
+	telApplication.startApplication();
 
 	//wait for apps to finish and then stop timing or whatever
 	pthread_mutex_lock(&count_mutex);
+	// while (count<numApps*2) {
 	while (count<numApps*2) {
 		pthread_cond_wait(&count_threshold_cv, &count_mutex);
 	}
