@@ -1,12 +1,28 @@
-Name: Davis Yoshida
-How to compile:
+Leslie Minor & Davis Yoshida
+
+Compile:
 $ make
 
-How to run:
-$ ./driver1
-$ ./driver2
-$ ./driver3
+Run:
+-Run process-per-protocol host:
+ $ ./ppprunner <local port> <remote host> <remote port>
+-Run process-per-message host:
+ $ ./ppmrunner <local port> <remote host> <remote port>
+-Timed run
+ $ ./time <host1> <host2> [<number of runs>]
 
-This meets the specifications of all features given in the assignment. There are no apparent bugs.
+Program compiles and runs without error.
 
-Test results are in the TEST_OUTPUT file.
+Timings (averaged over 10 runs):
+
+Per-process hosts:
+	586 ms
+
+Per-message hosts:
+    1194 ms
+
+Mixed hosts:
+    528 ms
+
+Results seem weird, but that's a result of the implementation:
+-In the process per message model, there's a mutex and a single count variable tracking the number of messages received. This creates a choke point.

@@ -85,7 +85,7 @@ int main(int argc, char* argv[], char* envp[]){
 
 
 	//make sure everything is set before we start timing
-	sleep(2);
+	sleep(5);
 	gettimeofday(&t1, NULL);
 	// dnsApplication.startListen();
 	// ftpApplication.startListen();

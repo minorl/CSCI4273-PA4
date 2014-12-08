@@ -32,8 +32,7 @@ int main(int argc, char** argv){
     struct timeval t2;
 
 
-    // breakTime(1000);
-    sleep(2);
+    sleep(4);
     gettimeofday(&t1, NULL);
     // printf("Going.\n");
     for(int i = 0;i < 100;i++){
@@ -41,7 +40,7 @@ int main(int argc, char** argv){
         char* message = new char[9];
         strcpy(message,"HelloDNS");
         ppm->sendTopLevel(message, 9, 8);
-        breakTime(5);
+        // breakTime(5);
         message = new char[9];
         strcpy(message,"HelloRDP");
         ppm->sendTopLevel(message, 9, 7);

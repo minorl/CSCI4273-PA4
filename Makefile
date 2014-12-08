@@ -13,9 +13,6 @@ ppprunner: ppprunner.cpp message.o
 ppm.o: ppm.cpp
 	$(CC) $(FLAGS) -o $@ -c $^
 
-ppp.o: ppp.cpp
-	$(CC) $(FLAGS) -o $@ -c $^
-
 threadpool.o: threadpool.cpp
 	$(CC) $(FLAGS) -o $@ -c $^
 
