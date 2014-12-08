@@ -98,7 +98,6 @@ int main(int argc, char* argv[], char* envp[]){
 
 	//wait for apps to finish and then stop timing or whatever
 	pthread_mutex_lock(&count_mutex);
-	// while (count<numApps*2) {
 	while (count<numApps*2) {
 		pthread_cond_wait(&count_threshold_cv, &count_mutex);
 	}

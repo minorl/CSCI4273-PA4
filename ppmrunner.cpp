@@ -7,7 +7,7 @@
 //timing stuff
 int numMsg = 400;
 int count = 0;
-// std::atomic<int> count;
+
 pthread_mutex_t count_mutex;
 pthread_cond_t count_threshold_cv;
 
@@ -34,21 +34,20 @@ int main(int argc, char** argv){
 
     sleep(7);
     gettimeofday(&t1, NULL);
-    // printf("Going.\n");
     for(int i = 0;i < 100;i++){
         // printf("Sending message block #%d\n", i);
         char* message = new char[9];
         strcpy(message,"HelloDNS");
         ppm->sendTopLevel(message, 9, 8);
-        // breakTime(5);
+
         message = new char[9];
         strcpy(message,"HelloRDP");
         ppm->sendTopLevel(message, 9, 7);
-        // breakTime(5);
+
         message = new char[9];
         strcpy(message,"HelloTel");
         ppm->sendTopLevel(message, 9, 6);
-        // breakTime(5);
+
         message = new char[9];
         strcpy(message,"HelloFTP");
         ppm->sendTopLevel(message, 9, 5);

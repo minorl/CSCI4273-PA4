@@ -24,8 +24,6 @@
 	template <class Header> class ppProtocol
 	{
 	public:
-		// typedef ethHeader Header;
-
 		ppProtocol(int id = 0);
 		~ppProtocol();
 		void start();
@@ -37,8 +35,6 @@
 		void getSend(int *pipe);
 		void setID(int id);
 
-
-		//for debug
 		//receive from hlp (outbound msg)
 		int sendPipe[2];
 		//receive from llp (inbound msg)
@@ -47,19 +43,6 @@
 		int llpPipe;
 		//hlpPipe (write inbound msg)
 		int hlpPipe[NUM_PROTOCOLS];
-
-		//pipe write is atomic and we're reading 
-		//fixed message size --  no mutex
-		// PROBABLY
-
-		// //receive from hlp (outbound msg)
-		// int sendPipe[2];
-		// //receive from llp (inbound msg)
-		// int recvPipe[2];
-		// //llp pipe (write outbound msg)
-		// int llpPipe;
-		// //hlpPipe (write inbound msg)
-		// int hlpPipe[NUM_PROTOCOLS];
 
 		void* handleRecv(void); 
 		static void *handleRecvHelper(void *instance) {
@@ -77,8 +60,6 @@
 
 	class ppETH: public ppProtocol<ethHeader>{
 	  public:
-	  	// ppETH();
-		// typedef ethHeader Header;
 	  	ppETH(int id, int listenPort, const char* sendPort, const char* sendHost);
 	  	~ppETH();
 	  	int getUDPSend(const char* host, const char* portnum);
@@ -92,44 +73,36 @@
 			return ((ppETH*)instance)->handleSend();
 		}
 		void sendUDP(int fd, char* message, int length);
-	  // private:
 	  	//host needs to set up and connect sockets
 		int recvReadSocket;
 		int recvSendSocket;
 	};
 	class ppIP: public ppProtocol<ipHeader>{
 	  public:
-		// typedef ipHeader Header;
 	  	ppIP(int id) : ppProtocol(id){};
 	};
 	class ppTCP: public ppProtocol<tcpHeader>{
 	  public:
-		// typedef tcpHeader Header;
 	  	ppTCP(int id) : ppProtocol(id){};	
 	};
 	class ppUDP: public ppProtocol<udpHeader>{
 	  public:
-		// typedef udpHeader Header;
 	  	ppUDP(int id) : ppProtocol(id){};
 	};
 	class ppFTP: public ppProtocol<ftpHeader>{
 	  public:
-		// typedef ftpHeader Header;
 	  	ppFTP(int id) : ppProtocol(id){};
 	};
 	class ppTEL: public ppProtocol<telHeader>{
 	  public:
-		// typedef telHeader Header;
 	  	ppTEL(int id) : ppProtocol(id){};
 	};
 	class ppRDP: public ppProtocol<rdpHeader>{
 	  public:
-		// typedef rdpHeader Header;
 	  	ppRDP(int id) : ppProtocol(id){};
 	};
 	class ppDNS: public ppProtocol<dnsHeader>{
 	  public:
-		// typedef dnsHeader Header;
 	  	ppDNS(int id) : ppProtocol(id){};
 	};
 
@@ -138,8 +111,6 @@
 		//needs no hlp- highest level
 		//generates messages when started
 	  public:
-		// typedef ftpHeader Header;
-
 		ppAPP(int id, bool timer);
 		void* handleRecv(void); 
 		static void *handleRecvHelper(void *instance) {
@@ -151,19 +122,16 @@
 		}
 		void startApplication();
 		void startListen();
-		//signal global condition variable, set up timing
 		bool timing;
 	};
 
 	class ftpAPP : public ppAPP<ftpHeader>{
 	  public:
-		// typedef ftpHeader Header;
 	  	ftpAPP(int id, bool timing) : ppAPP(id, timing){};
 	};
 
 	class dnsAPP : public ppAPP<dnsHeader>{
 	  public:
-		// typedef dnsHeader Header;
 	  	dnsAPP(int id, bool timing) : ppAPP(id, timing){};	
 	};
 
@@ -218,9 +186,8 @@
 	template <class T>
 	void ppProtocol<Header>::registerHLP(ppProtocol<T> hlp){
 		//this level of abstraction is unncessary
-		// but it's so confusing the naming conventions
+		// but naming conventions of send/deliver are confusing
 		//registers a higher level protocol
-		// hlp.getRecv(hlpPipe, hlpMutex);
 		hlp.getRecv(hlpPipe);
 	}
 	template <class Header> 
@@ -235,7 +202,6 @@
 		// so send recv values
 		//give WRITE end of recv pipe
 		pipe[protocolID-1] = recvPipe[1];
-		// mutex[protocolID-1] = &recvMutex;
 	}
 	template <class Header> 
 	void ppProtocol<Header>::getSend(int *pipe){
@@ -253,9 +219,8 @@
 		// reads send pipe
 		// which receives from hlp
 		// handles outbound messages
-		// send ot llp
+		// send to llp
 		int nbytes;
-		//expect int + msg ptr
 		int packetSize = sizeof(int)+sizeof(char*);
 		char buff[packetSize];
 		int ptr_size, int_size;
@@ -278,8 +243,6 @@
 			}
 			//process received info
 			memcpy(&hlpID, &buff, int_size);
-			//this doesn't work=== why?
-			// msgPtr = (Message*)(buff+sizeof(int));
 			memcpy(&msgPtr, &buff[int_size], ptr_size);
 
 			//create new header
@@ -287,19 +250,15 @@
 			memset(head, 0, sizeof(*head));
 			head->hlp = hlpID;
 			head->len = msgPtr->msgLen();
+			
 			//add header to message
-
 			msgPtr->msgAddHdr((char*)head, sizeof(*head));
 			//send message down pipe
 			   //include this id (hlp)
 			memcpy(&buff, &protocolID, int_size);
-			// *((int*)buff) = protocolID;
-			//it should already be this
-			// *(Message*)(buff+sizeof(int)) = msgPtr;
+			//leave msg pointer alone
 
 			//write message to llp
-			// fprintf(stderr, "in Proto %d to llp:\n", protocolID);
-
 			if(write(llpPipe, buff, packetSize)<0){
 				fprintf(stderr, "in Proto %d to llp:\n", protocolID);
 				perror("write");
@@ -314,7 +273,6 @@
 		//process inc message, strip header and send up
 
 		int nbytes;
-		//expect msg ptr
 		int packetSize = sizeof(char*);
 		char buff[packetSize];
 		int hlpID;
@@ -333,29 +291,20 @@
 			}
 			//process received info
 			memcpy(&msgPtr, &buff, packetSize);
-			// msgPtr = (Message*)buff;
-			// printf("Protoid %d headerlen %lu\n",protocolID, sizeof(Header));
 			
 			//remove own level protocol
 			head = (Header*)msgPtr->msgStripHdr(sizeof(Header));
 			hlpID = head->hlp;
 
-
 			//send message up pipe
 			   //to appropriate hlp
 
-			//this should already be set
-			// (Message*)(buff) = msgPtr;
-
-			//write message to hlp
-			//write message to hlp
+			//sanity checks
 			if(hlpID == 0 || hlpID == 1 || hlpID == -1){
 				//0 not valid, 1 is ethernet, not "above" anyone
 			 fprintf(stderr, "Incorrect hlp: in Proto %d to %d:\n", protocolID, hlpID);
 			 continue;
 			}
-
-			// fprintf(stderr, "in Proto %d to hlp %d:\n", protocolID, hlpID );
 
 			if(write(hlpPipe[hlpID-1], buff, packetSize) <0){
 				fprintf(stderr, "in Proto %d to %d:\n", protocolID, hlpID );
@@ -366,8 +315,9 @@
 	}
 
 	ppETH::ppETH(int id, int listenPort, const char* sendPort, const char* sendHost) : ppProtocol(id){
-		//do this in start
 		int rc;
+
+		//this is gross, should rewrite sockets
 		recvSendSocket = getUDPSend(sendHost, sendPort);
 		sleep(2);
 		recvReadSocket = bindUDPListen(listenPort);
@@ -386,12 +336,10 @@
 			exit(1);
 		}
 
-		//recv is from socket
 	}
 	ppETH::~ppETH(){
 		close(recvReadSocket);
 		close(recvSendSocket);
-		// printf("DESTRUCTED\n");
 	}
 
 	int ppETH::getUDPSend(const char *host, const char *portnum){
@@ -480,8 +428,6 @@
 			}
 			//process received info
 			memcpy(&hlpID, &buff, int_size);
-			//this doesn't work=== why?
-			// msgPtr = (Message*)(buff+sizeof(int));
 			memcpy(&msgPtr, &buff[int_size], ptr_size);
 
 			//create new header
@@ -489,6 +435,7 @@
 			memset(head, 0, sizeof(*head));
 			head->hlp = hlpID;
 			head->len = msgPtr->msgLen();
+
 			//add header to message
 			msgPtr->msgAddHdr((char*)head, sizeof(*head));
 			memset(sendbuff,0,1024);
@@ -497,10 +444,6 @@
 			msgPtr->msgFlat(&sendbuff[int_size]);
 
 			//write message to "wire"
-			// if(write(recvSendSocket, thing, packetSize)<0){
-			// 	perror("write");
-			// 	exit(1);
-			// }
 			sendUDP(recvSendSocket,sendbuff, 1024);
 
 		}
@@ -532,8 +475,6 @@
 			//process received info
 			memcpy(&msgLen, &buff, sizeof(int));
 			msgLen = ntohl(msgLen);
-			// printf("eth recv msg len %d\n",msgLen);
-
 			
 			charptr = new char[msgLen];
 			memset(charptr, 0, msgLen);
@@ -542,7 +483,6 @@
 			msgPtr = new Message(charptr, msgLen);
 			//remove own level protocol
 			head = (ethHeader*)msgPtr->msgStripHdr(sizeof(ethHeader));
-			// printf("Protoid %d headerlen %lu\n",protocolID, sizeof(ethHeader));
 			hlpID = head->hlp;
 
 			memset(buff,0,packetSize);		
@@ -579,7 +519,7 @@
 	ppAPP<Header>::ppAPP(int id, bool timer) : ppProtocol<Header>(id){
 		// start threads in 'start funciton'
 		//only recv pipe
-		//still calling default.. awkward.
+		//still calling inherited constructor.. awkward.
 		if(pipe(this->recvPipe)<0){
 			perror("pipe");
 			exit(1);
@@ -666,7 +606,8 @@
 			//sleep 
 			usleep(sleepTime);
 		}
-		// printf("All messages sent\n");
+
+		//signal timing mechanism that possibly done
 		if(this->timing){
 			pthread_mutex_lock(&count_mutex);
 			count++;
@@ -719,15 +660,13 @@
 			msgPtr->msgFlat(msgContent);
 			msgContent[msgPtr->msgLen()] = '\0';
 
-			// printf("Received msg #%d, %s\n", i,msgContent);
-
 			//inadequate clean up
 			delete head;
 			delete[] msgContent;
 			delete msgPtr;
 		}
 		
-		// printf("All messages recvd\n");
+		//signal timing that we might be done
 		if(this->timing){
 			pthread_mutex_lock(&count_mutex);
 			count++;

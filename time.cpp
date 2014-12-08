@@ -32,14 +32,12 @@ int main(int argc, char* argv[], char* envp[]){
     child_pid1 = fork();
     if(child_pid1 == 0) {
       execv((char*)args1[0], (char**)args1);
-      // execv((char*)args1[0], (char**)args1);
       fprintf(stderr, "Exec fail\n");
       exit(0);
     }
     child_pid2 = fork();
     if(child_pid2 == 0) {
       execv((char*)args2[0], (char**)args2);
-      // execv((char*)args2[0], (char**)args1);
       fprintf(stderr, "Exec fail\n");
       exit(0);
     }

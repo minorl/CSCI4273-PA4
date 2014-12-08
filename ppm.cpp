@@ -22,7 +22,6 @@
         while(1){
             char readBuf[1024];
             //printf("Waiting...\n");
-            // size_t result = recv(sockFD, readBuf, 1024, 0);
             recv(sockFD, readBuf, 1024, 0);
             int msgLen = ntohl(*((int*) readBuf));
             Message * inboundMsg = new Message(readBuf + sizeof(int), msgLen);
@@ -116,18 +115,8 @@
         fflush(stdout);
         (void)name;
 
-        //this won't work because 800 messages generated per side
-        //also how can you guarantee that 400 won't be a message
-        //being sent down?
-        // if(inboundMsg->id == 400 ){
-        //     // printf("received all messages\n");
-        //     Message::setDone(true);
-        // }
-
-
         // this will probably slow it down a lot...
         // it does. 
-        //atomic variable is the same slow down
         pthread_mutex_lock(&count_mutex);
         ++count;
         if(count >= 400){
@@ -161,11 +150,6 @@
         *((int*)header) = protoId;
         memset(header + sizeof(int), 0, infoLength);
         *((size_t*)(header + sizeof(int) + infoLength)) = outboundMessage->msgLen();
-
-        // printf("Header ints (sendTopLevel)...\n");
-        // for(int i = 0; i < 4; i++){
-        //     printf("Header ints: %d\n", *((int*)header+sizeof(int)*i));
-        // }
 
         //double header to match PPP code
         outboundMessage->msgAddHdr(header, headerLength);
