@@ -76,7 +76,7 @@
             deliverTopLevel(inboundMsg, 8, "DNS");
             break;
         default:
-            printf("Incorrect hlp in TCP/UDP.\n");
+            printf("Incorrect hlp in TCP/UDP: got %d.\n", hlpId);
         }
 
         }
@@ -92,29 +92,24 @@
         fflush(stdout);
         (void)name;
 
-        // if (inboundMsg->id % 100 == 0)
-        // {
-        // printf("inboundMsgid: %d\n", inboundMsg->id);
-            
-        // }
         //this won't work because 800 messages generated per side
         //also how can you guarantee that 400 won't be a message
         //being sent down?
-        if(inboundMsg->id == 400 ){
-            // printf("received all messages\n");
-            Message::setDone(true);
-        }
+        // if(inboundMsg->id == 400 ){
+        //     // printf("received all messages\n");
+        //     Message::setDone(true);
+        // }
 
 
         // this will probably slow it down a lot...
         // it does. 
-            pthread_mutex_lock(&count_mutex);
-        //atomic variable is the same
-            ++count;
-            if(count >= 400){
-                pthread_cond_signal(&count_threshold_cv);
-            }
-            pthread_mutex_unlock(&count_mutex);
+        //atomic variable is the same slow down
+        pthread_mutex_lock(&count_mutex);
+        ++count;
+        if(count >= 400){
+            pthread_cond_signal(&count_threshold_cv);
+        }
+        pthread_mutex_unlock(&count_mutex);
     }
 
     void ProcessPerMessage::sendTopLevel(char* message, size_t length, int protoId){
@@ -137,6 +132,7 @@
 
         size_t headerLength = sizeof(int) + infoLength + sizeof(size_t);
         char* header = new char[headerLength];
+        //WHAT IS THIS DOING?!
         *((int*)header) = -1;
         memset(header + sizeof(int), 0, infoLength);
         *((size_t*)(header + sizeof(int) + infoLength)) = outboundMessage->msgLen();

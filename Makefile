@@ -2,12 +2,12 @@ CC=g++
 FLAGS=-g -std=gnu++11 -Wall -Wextra
 LIBS=-lpthread
 
-all: ppmrunner ppprunner timePP timePM
+all: ppmrunner ppprunner timePP timePM timeMix
 
 ppmrunner: ppmrunner.cpp ppm.o message.o threadpool.o
 	$(CC) $(FLAGS) -o $@ $^ $(LIBS)
 
-ppprunner: ppprunner.cpp message.o ppProtocol.o
+ppprunner: ppprunner.cpp message.o
 	$(CC) $(FLAGS) -o $@ $^ $(LIBS)
 
 ppm.o: ppm.cpp
@@ -27,6 +27,8 @@ timePP: timePP.cpp
 
 timePM: timePM.cpp
 	$(CC) $(FLAGS) -o $@ $^ 
-	
+timeMix: timeMix.cpp
+	$(CC) $(FLAGS) -o $@ $^ 
+
 clean:
 	rm -f threadpool.o message.o ppp.o ppm.o ppmrunner ppprunner
